@@ -1,0 +1,23 @@
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import authRouter from './auth/auth.router.js';
+import connectDB from './config/db.js';
+
+const app = express();
+app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
+app.use(express.json());
+app.use('/api/auth', authRouter);
+
+app.get('/health', (req, res) => {
+  res.send('Server is running');
+});
+
+// Await the database connection before accepting API requests
+connectDB().then(() => {
+  app.listen(3000, () => {
+    console.log('Server is running on port 3000');
+  });
+}).catch(err => {
+  console.error('Failed to start server due to DB connection issue', err);
+});
