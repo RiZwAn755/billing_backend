@@ -64,23 +64,50 @@ export const signup = async(req , resp) => {
     resp.status(200).send("user created successfully");
 }
 
-export const updateuser = async(req , resp) => {
+export const updateuser = async (req, resp) => {
     const data = req.body;
-    const user = await User.findOne({ businessName: data.businessname });
+    let user;
 
-    if(!user){
-        return resp.status(401).send("user not found");    
+    // Support legacy update by businessname or update by _id
+    if (data._id) {
+        user = await User.findById(data._id);
+    } else {
+        user = await User.findOne({ businessName: data.businessname });
+    }
+
+    if (!user) {
+        return resp.status(404).send("user not found");    
     }
 
     user.dueDate = data.dueDate;
     user.email = data.email;
-    user.businessName = data.businessname;  
-    user.password = data.password;
+    user.businessName = data.businessname || data.businessName;  
+    
+    // Only update password if provided
+    if (data.password && data.password.trim() !== "") {
+        user.password = data.password;
+    }
+    
     user.phoneNumber = data.phoneNumber;
     user.isActive = data.isActive;
     user.role = data.role;
     await user.save();
-    resp.status(200).send("plan renewed successfully");
+    resp.status(200).send("user updated successfully");
+}
+
+export const deleteUser = async (req, resp) => {
+    try {
+        const { id } = req.params;
+        const deletedUser = await User.findByIdAndDelete(id);
+        
+        if (!deletedUser) {
+            return resp.status(404).send("User not found");
+        }
+        
+        resp.status(200).send("User deleted successfully");
+    } catch (error) {
+        resp.status(500).send("Failed to delete user");
+    }
 }
 
 export const getAllUsers = async (req, resp) => {
