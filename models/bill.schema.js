@@ -53,7 +53,7 @@ const billSchema = new mongoose.Schema({
 
 billSchema.pre("save", async function () {
     if (this.isNew) {
-        const last = await mongoose.model('Bill').findOne(
+        const last = await this.constructor.findOne(
             { businessId: this.businessId, billNumber: { $exists: true } },
             { billNumber: 1 },
             { sort: { billNumber: -1 } }

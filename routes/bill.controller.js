@@ -20,8 +20,8 @@ export const createBill = async (req, res) => {
             id: bill._id.toString()
         });
     } catch (error) {
-        console.error("Error creating bill:", error);
-        res.status(500).json({ error: "Failed to create bill" });
+        console.error("Error creating bill:", error.message, error.code, error.keyValue);
+        res.status(500).json({ error: "Failed to create bill", detail: error.message });
     }
 };
 
