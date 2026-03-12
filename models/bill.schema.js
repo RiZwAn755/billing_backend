@@ -39,8 +39,24 @@ const billSchema = new mongoose.Schema({
     businessId: {
         type: String,
         required: true
+    },
+    date: {
+        type: Date,
+        default: Date.now
+    },
+    billNumber: {
+        type: Number,
+        unique: true,
+        sparse: true  // allows existing docs without billNumber to coexist
     }
 }, { timestamps: true });
+
+billSchema.pre("save", async function () {
+    if (this.isNew) {
+        const count = await mongoose.model('Bill').countDocuments({ businessId: this.businessId });
+        this.billNumber = count + 1;
+    }
+});
 
 // Index for performance filtering by businessId
 billSchema.index({ businessId: 1 });

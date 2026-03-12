@@ -11,10 +11,7 @@ export const createBill = async (req, res) => {
     try {
         const billData = req.body;
         billData.businessId = req.user.businessId;
-        
-        // Auto-generate Bill Number
-        const currentCount = await Bill.countDocuments({ businessId: req.user.businessId });
-        billData.billNumber = currentCount + 1;
+        // billNumber is auto-assigned by the pre-save hook in bill.schema.js
 
         const bill = new Bill(billData);
         await bill.save();
