@@ -45,9 +45,7 @@ const billSchema = new mongoose.Schema({
         default: Date.now
     },
     billNumber: {
-        type: Number,
-        unique: true,
-        sparse: true  // allows existing docs without billNumber to coexist
+        type: Number
     }
 }, { timestamps: true });
 

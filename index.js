@@ -22,7 +22,15 @@ app.get('/health', (req, res) => {
 });
 
 // Await the database connection before accepting API requests
-connectDB().then(() => {
+connectDB().then(async () => {
+  // Drop the stale unique index on billNumber if it exists
+  try {
+    const Bill = (await import('./models/bill.schema.js')).default;
+    await Bill.collection.dropIndex('billNumber_1');
+    console.log('Dropped stale billNumber_1 index');
+  } catch (e) {
+    // Index doesn't exist — that's fine
+  }
   app.listen(3000, () => {
     console.log('Server is running on port 3000');
   });
