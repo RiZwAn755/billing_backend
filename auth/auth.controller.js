@@ -1,6 +1,6 @@
-
 import User from "../models/user.schema.js";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 export const login = async(req , resp) => {
 
@@ -25,8 +25,8 @@ export const login = async(req , resp) => {
     const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
     const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
 
-    const accessToken = jwt.sign({businessName:user.businessName, role:user.role}, accessTokenSecretKey, {expiresIn: "1h"});
-    const refreshToken = jwt.sign({businessName:user.businessName, role:user.role}, refreshTokenSecretKey, {expiresIn: "1d"});
+    const accessToken = jwt.sign({businessName:user.businessName, role:user.role, businessId: user.businessId}, accessTokenSecretKey, {expiresIn: "1h"});
+    const refreshToken = jwt.sign({businessName:user.businessName, role:user.role, businessId: user.businessId}, refreshTokenSecretKey, {expiresIn: "1d"});
 
     resp.cookie("accessToken", accessToken, { httpOnly: true,});
     resp.cookie("refreshToken", refreshToken, { httpOnly: true, });
@@ -51,7 +51,10 @@ export const signup = async(req , resp) => {
     const dueDate = new Date();
     dueDate.setFullYear(dueDate.getFullYear() + 1);
 
+    const businessId = crypto.randomUUID();
+
     const newUser = new User({
+        businessId,
         businessName: businessName, 
         password,
         email,

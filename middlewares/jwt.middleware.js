@@ -28,8 +28,8 @@ export const verifyToken = async(req, res, next) => {
                     const accessTokenSecretKey = process.env.ACCESS_TOKEN_SECRET_KEY;
                     const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
 
-                    const newAccessToken = jwt.sign({ businessName: dbUser.businessName, role: dbUser.role }, accessTokenSecretKey, { expiresIn: "1h" });
-                    const newRefreshToken = jwt.sign({ businessName: dbUser.businessName, role: dbUser.role }, refreshTokenSecretKey, { expiresIn: "1d" });  
+                    const newAccessToken = jwt.sign({ businessName: dbUser.businessName, role: dbUser.role, businessId: dbUser.businessId }, accessTokenSecretKey, { expiresIn: "1h" });
+                    const newRefreshToken = jwt.sign({ businessName: dbUser.businessName, role: dbUser.role, businessId: dbUser.businessId }, refreshTokenSecretKey, { expiresIn: "1d" });  
                     
                     dbUser.refreshToken = newRefreshToken;
                     await dbUser.save();  
