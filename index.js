@@ -9,7 +9,7 @@ import expenseRouter from './routes/expense.router.js';
 import connectDB from './config/db.js';
 
 const app = express();
-app.use(cors({ origin: ['http://localhost:5173', 'https://billing-backend-gamma.vercel.app/', 'https://needy-bills.vercel.app/'], credentials: true }));
+app.use(cors({ origin: ['http://localhost:5173', 'https://billing-backend-gamma.vercel.app', 'https://needy-bills.vercel.app'], credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/api/auth', authRouter);
