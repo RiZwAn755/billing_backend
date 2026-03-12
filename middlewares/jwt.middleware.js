@@ -35,8 +35,8 @@ export const verifyToken = async(req, res, next) => {
                     await dbUser.save();  
                     
                     req.user = decodedRefreshUser;
-                    res.cookie("accessToken", newAccessToken, { httpOnly: true});        
-                    res.cookie("refreshToken", newRefreshToken, { httpOnly: true});        
+                    res.cookie("accessToken", newAccessToken, { httpOnly: true, sameSite: 'none', secure: true });        
+                    res.cookie("refreshToken", newRefreshToken, { httpOnly: true, sameSite: 'none', secure: true });        
                     next();
                 } catch (dbError) {
                     return res.status(500).send("Internal Server Error");

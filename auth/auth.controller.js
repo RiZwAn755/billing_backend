@@ -28,8 +28,8 @@ export const login = async(req , resp) => {
     const accessToken = jwt.sign({businessName:user.businessName, role:user.role, businessId: user.businessId}, accessTokenSecretKey, {expiresIn: "1h"});
     const refreshToken = jwt.sign({businessName:user.businessName, role:user.role, businessId: user.businessId}, refreshTokenSecretKey, {expiresIn: "1d"});
 
-    resp.cookie("accessToken", accessToken, { httpOnly: true,});
-    resp.cookie("refreshToken", refreshToken, { httpOnly: true, });
+    resp.cookie("accessToken", accessToken, { httpOnly: true, sameSite: 'none', secure: true });
+    resp.cookie("refreshToken", refreshToken, { httpOnly: true, sameSite: 'none', secure: true });
     user.refreshToken = refreshToken;
     await user.save();      
 
