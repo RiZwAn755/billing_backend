@@ -53,8 +53,12 @@ const billSchema = new mongoose.Schema({
 
 billSchema.pre("save", async function () {
     if (this.isNew) {
-        const count = await mongoose.model('Bill').countDocuments({ businessId: this.businessId });
-        this.billNumber = count + 1;
+        const last = await mongoose.model('Bill').findOne(
+            { businessId: this.businessId, billNumber: { $exists: true } },
+            { billNumber: 1 },
+            { sort: { billNumber: -1 } }
+        );
+        this.billNumber = last ? last.billNumber + 1 : 1;
     }
 });
 
