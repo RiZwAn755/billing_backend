@@ -12,6 +12,9 @@ const billSchema = new mongoose.Schema({
             price: { type: Number, required: true },
             qty: { type: Number, required: true },
             unit: { type: String },
+            discountType: { type: String, enum: ['percent', 'flat'], default: 'flat' },
+            discountValue: { type: Number, default: 0 },
+            discountAmount: { type: Number, default: 0 },
             amount: { type: Number, required: true }
         }
     ],
