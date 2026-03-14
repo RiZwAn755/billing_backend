@@ -4,24 +4,24 @@ import User from "../models/user.schema.js";
 
 export const verifyToken = async(req, res, next) => {
     const token = req.cookies.accessToken;
-    if(!token) return res.status(401).send("You are not authenticated!");
+    if(!token) return res.status(401).json({ error: "You are not authenticated!" });
     
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET_KEY, (err, decodedUser) => {
         if(err){ // access token is expired 
             const refreshToken = req.cookies.refreshToken;
 
-            if(!refreshToken) return res.status(401).send("You are not authenticated!"); // refresh token is not available  
+            if(!refreshToken) return res.status(401).json({ error: "You are not authenticated!" }); // refresh token is not available  
 
             const refreshTokenSecretKey = process.env.REFRESH_TOKEN_SECRET_KEY;
              // verify refresh token    
             jwt.verify(refreshToken, refreshTokenSecretKey, async(err, decodedRefreshUser) => {
-                if(err) return res.status(403).send("Token is not valid!"); // refresh token is expired
+                if(err) return res.status(403).json({ error: "Token is not valid!" }); // refresh token is expired
                 
                 try {
                     // Find user in database to update the token and check token legitimacy
                     const dbUser = await User.findOne({ businessName: decodedRefreshUser.businessName });
                     if(!dbUser || dbUser.refreshToken !== refreshToken) {
-                        return res.status(403).send("Token is not valid or has been revoked!");
+                        return res.status(403).json({ error: "Token is not valid or has been revoked!" });
                     }
 
                     // generate new tokens

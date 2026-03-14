@@ -2,6 +2,8 @@ import Bill from "../models/bill.schema.js";
 import Expense from "../models/expense.schema.js";
 import Product from "../models/product.schema.js";
 
+console.log("[Stats Controller] Loaded");
+
 export const getOverallStats = async (req, res) => {
     try {
         const businessId = req.user.businessId;
@@ -40,70 +42,74 @@ export const getProfitAnalytics = async (req, res) => {
         const { period = 'monthly' } = req.query;
         const businessId = req.user.businessId;
 
-        let dateFormat = "%Y-%m";
-        if (period === 'yearly') dateFormat = "%Y";
-        // half-yearly handling requires more complex logic in $group or post-processing
-
-        const revenueData = await Bill.aggregate([
-            { $match: { businessId } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: dateFormat, date: "$createdAt" } },
-                    revenue: { $sum: "$grandTotal" }
-                }
-            },
-            { $sort: { _id: 1 } }
+        // Fetch raw data to group in JS for maximum reliability
+        const [bills, expenses] = await Promise.all([
+            Bill.find({ businessId: req.user.businessId }).select('grandTotal date createdAt').lean(),
+            Expense.find({ businessId: req.user.businessId }).select('totalCost date createdAt').lean()
         ]);
 
-        const expenseData = await Expense.aggregate([
-            { $match: { businessId } },
-            {
-                $group: {
-                    _id: { $dateToString: { format: dateFormat, date: "$date" } },
-                    expenses: { $sum: "$totalCost" }
-                }
-            },
-            { $sort: { _id: 1 } }
-        ]);
-
-        // Merge logic
         const mergeMap = {};
-        revenueData.forEach(item => {
-            mergeMap[item._id] = { label: item._id, revenue: item.revenue, expenses: 0, profit: item.revenue };
-        });
-        expenseData.forEach(item => {
-            if (!mergeMap[item._id]) {
-                mergeMap[item._id] = { label: item._id, revenue: 0, expenses: item.expenses, profit: -item.expenses };
-            } else {
-                mergeMap[item._id].expenses = item.expenses;
-                mergeMap[item._id].profit = mergeMap[item._id].revenue - item.expenses;
+
+        const getMonthKey = (date, fallback) => {
+            try {
+                const d = new Date(date || fallback);
+                if (isNaN(d.getTime())) return "Unknown";
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                if (period === 'yearly') return `${y}`;
+                return `${y}-${m}`;
+            } catch {
+                return "Unknown";
             }
+        };
+
+        bills.forEach(bill => {
+            const key = getMonthKey(bill.date, bill.createdAt);
+            if (!mergeMap[key]) mergeMap[key] = { label: key, revenue: 0, expenses: 0, profit: 0 };
+            const amount = Number(bill.grandTotal) || 0;
+            mergeMap[key].revenue += amount;
+            mergeMap[key].profit += amount;
         });
 
-        // Special handling for half-yearly if needed, otherwise this works for monthly/yearly
-        let result = Object.values(mergeMap).sort((a, b) => a.label.localeCompare(b.label));
-        
+        expenses.forEach(exp => {
+            const key = getMonthKey(exp.date, exp.createdAt);
+            if (!mergeMap[key]) mergeMap[key] = { label: key, revenue: 0, expenses: 0, profit: 0 };
+            const cost = Number(exp.totalCost) || 0;
+            mergeMap[key].expenses += cost;
+            mergeMap[key].profit -= cost;
+        });
+
+        // Ensure we have at least SOME data if bills/expenses exist but grouping fails
+        if (Object.keys(mergeMap).length === 0 && (bills.length > 0 || expenses.length > 0)) {
+            const fallbackKey = period === 'yearly' ? new Date().getFullYear().toString() : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+            mergeMap[fallbackKey] = { label: fallbackKey, revenue: 0, expenses: 0, profit: 0 };
+        }
+
+        let result = Object.values(mergeMap).sort((a, b) => String(a.label).localeCompare(String(b.label)));
+
         if (period === 'half-yearly') {
-             // Post-process monthly into half-yearly if that's what's requested
-             const hMap = {};
-             result.forEach(item => {
-                 const [y, m] = item.label.split('-');
-                 const h = parseInt(m) <= 6 ? 'H1' : 'H2';
-                 const key = `${y} ${h}`;
-                 if (!hMap[key]) {
-                     hMap[key] = { label: key, revenue: 0, expenses: 0, profit: 0 };
-                 }
-                 hMap[key].revenue += item.revenue;
-                 hMap[key].expenses += item.expenses;
-                 hMap[key].profit += item.profit;
-             });
-             result = Object.values(hMap).sort((a, b) => a.label.localeCompare(b.label));
+            const hMap = {};
+            result.forEach(item => {
+                if (item.label === "Unknown") return;
+                const [y, m] = item.label.split('-');
+                const h = parseInt(m) <= 6 ? 'H1' : 'H2';
+                const key = `${y} ${h}`;
+                if (!hMap[key]) hMap[key] = { label: key, revenue: 0, expenses: 0, profit: 0 };
+                hMap[key].revenue += item.revenue;
+                hMap[key].expenses += item.expenses;
+                hMap[key].profit += item.profit;
+            });
+            result = Object.values(hMap).sort((a, b) => a.label.localeCompare(b.label));
         }
 
         res.status(200).json(result);
     } catch (error) {
         console.error("Error fetching profit analytics:", error);
-        res.status(500).json({ error: "Failed to fetch analytics" });
+        res.status(500).json({ 
+            error: "Failed to fetch analytics", 
+            message: error.message,
+            stack: error.stack 
+        });
     }
 };
 
@@ -114,52 +120,51 @@ export const getProductAnalytics = async (req, res) => {
 
         if (!productName) return res.status(400).json({ error: "productName is required" });
 
-        const [revenueData, expenseData] = await Promise.all([
-            Bill.aggregate([
-                { $match: { businessId, "items.name": { $regex: new RegExp(`^${productName}$`, "i") } } },
-                { $unwind: "$items" },
-                { $match: { "items.name": { $regex: new RegExp(`^${productName}$`, "i") } } },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                        revenue: { $sum: "$items.amount" }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ]),
-            Expense.aggregate([
-                { $match: { businessId, productName: { $regex: new RegExp(`^${productName}$`, "i") } } },
-                {
-                    $group: {
-                        _id: { $dateToString: { format: "%Y-%m", date: "$date" } },
-                        expenses: { $sum: "$totalCost" }
-                    }
-                },
-                { $sort: { _id: 1 } }
-            ])
+        const [bills, expenses] = await Promise.all([
+            Bill.find({ businessId: req.user.businessId, "items.name": { $regex: new RegExp(`^${productName}$`, "i") } }).select('items createdAt date').lean(),
+            Expense.find({ businessId: req.user.businessId, productName: { $regex: new RegExp(`^${productName}$`, "i") } }).select('totalCost date createdAt').lean()
         ]);
 
-        const totalRevenue = revenueData.reduce((sum, item) => sum + item.revenue, 0);
-        const totalExpense = expenseData.reduce((sum, item) => sum + item.expenses, 0);
-
         const mergeMap = {};
-        revenueData.forEach(item => {
-            mergeMap[item._id] = { label: item._id, revenue: item.revenue, expenses: 0, profit: item.revenue };
-        });
-        expenseData.forEach(item => {
-            if (!mergeMap[item._id]) {
-                mergeMap[item._id] = { label: item._id, revenue: 0, expenses: item.expenses, profit: -item.expenses };
-            } else {
-                mergeMap[item._id].expenses = item.expenses;
-                mergeMap[item._id].profit = mergeMap[item._id].revenue - item.expenses;
+        let totalRevenue = 0;
+        let totalExpense = 0;
+
+        const getMonthKey = (date, fallback) => {
+            try {
+                const d = new Date(date || fallback);
+                if (isNaN(d.getTime())) return "Unknown";
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            } catch {
+                return "Unknown";
             }
+        };
+
+        bills.forEach(bill => {
+            const billKey = getMonthKey(bill.date, bill.createdAt);
+            if (!mergeMap[billKey]) mergeMap[billKey] = { label: billKey, revenue: 0, expenses: 0, profit: 0 };
+            
+            bill.items.forEach(item => {
+                if (item.name.toLowerCase() === productName.toLowerCase()) {
+                    mergeMap[billKey].revenue += (item.amount || 0);
+                    mergeMap[billKey].profit += (item.amount || 0);
+                    totalRevenue += (item.amount || 0);
+                }
+            });
+        });
+
+        expenses.forEach(exp => {
+            const expKey = getMonthKey(exp.date, exp.createdAt);
+            if (!mergeMap[expKey]) mergeMap[expKey] = { label: expKey, revenue: 0, expenses: 0, profit: 0 };
+            mergeMap[expKey].expenses += (exp.totalCost || 0);
+            mergeMap[expKey].profit -= (exp.totalCost || 0);
+            totalExpense += (exp.totalCost || 0);
         });
 
         res.status(200).json({
             totalRevenue,
             totalExpense,
             totalProfit: totalRevenue - totalExpense,
-            monthly: Object.values(mergeMap).sort((a, b) => a.label.localeCompare(b.label))
+            monthly: Object.values(mergeMap).sort((a, b) => String(a.label).localeCompare(String(b.label)))
         });
     } catch (error) {
         console.error("Error fetching product analytics:", error);
