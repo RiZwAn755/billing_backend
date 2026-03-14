@@ -67,7 +67,7 @@ export const invalidateBusinessCache = async (businessId) => {
         }
         console.log(`🧹 Invalidated all cache keys for business: ${businessId}`);
     } catch (err) {
-        console.error('Redis Invalidation Error:', err);
+        console.error('Redis Invalidation  Error:', err);
     }
 };
 
