@@ -33,6 +33,7 @@ export const setCache = async (key, value, duration = 86400) => {
 export const getCache = async (key) => {
     try {
         const data = await redisClient.get(key);
+        console.log("Data from cache");
         return data ? JSON.parse(data) : null;
     } catch (err) {
         console.error('Redis Get Error:', err);
@@ -48,15 +49,25 @@ export const delCache = async (key) => {
     }
 };
 
-export const clearStatsCache = async (businessId) => {
+export const invalidateBusinessCache = async (businessId) => {
     try {
-        const keys = await redisClient.keys(`stats:*:${businessId}*`);
-        if (keys.length > 0) {
-            await redisClient.del(keys);
-            console.log(`🧹 Cleared ${keys.length} cache keys for business: ${businessId}`);
+        // Clear stats, bills, expenses, and products for this business
+        const patterns = [
+            `stats:*:${businessId}*`,
+            `bills:*:${businessId}*`,
+            `expenses:*:${businessId}*`,
+            `products:*:${businessId}*`
+        ];
+        
+        for (const pattern of patterns) {
+            const keys = await redisClient.keys(pattern);
+            if (keys.length > 0) {
+                await redisClient.del(keys);
+            }
         }
+        console.log(`🧹 Invalidated all cache keys for business: ${businessId}`);
     } catch (err) {
-        console.error('Redis Clear Cache Error:', err);
+        console.error('Redis Invalidation Error:', err);
     }
 };
 

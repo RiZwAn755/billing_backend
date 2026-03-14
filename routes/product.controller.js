@@ -1,5 +1,5 @@
 import Product from "../models/product.schema.js";
-import { clearStatsCache } from "../config/redis.js";
+import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
 
 export const createProduct = async (req, res) => {
     try {
@@ -11,7 +11,7 @@ export const createProduct = async (req, res) => {
         await product.save();
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(201).json(product);
     } catch (error) {
@@ -22,13 +22,26 @@ export const createProduct = async (req, res) => {
 
 export const getProducts = async (req, res) => {
     try {
+        const businessId = req.user.businessId;
+        const cacheKey = `products:list:${businessId}`;
+
+        // Try Cache
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
+
         // Only return products matching the user's businessId
-        const products = await Product.find({ businessId: req.user.businessId }).sort({ createdAt: -1 });
+        const products = await Product.find({ businessId }).sort({ createdAt: -1 });
         // Add robust mapping to map MongoDB _id to frontend id requirement dynamically
         const formattedProducts = products.map(p => ({
             ...p.toObject(),
             id: p._id.toString()
         }));
+
+        // Cache for 10 minutes
+        await setCache(cacheKey, formattedProducts, 600);
+
         res.status(200).json(formattedProducts);
     } catch (error) {
         console.error("Error fetching products:", error);
@@ -53,7 +66,7 @@ export const updateProduct = async (req, res) => {
         }
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(200).json({
              ...product.toObject(),
@@ -79,7 +92,7 @@ export const deleteProduct = async (req, res) => {
         }
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {

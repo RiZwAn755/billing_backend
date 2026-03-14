@@ -1,5 +1,5 @@
 import Expense from "../models/expense.schema.js";
-import { clearStatsCache } from "../config/redis.js";
+import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
 
 export const createExpense = async (req, res) => {
     try {
@@ -11,7 +11,7 @@ export const createExpense = async (req, res) => {
         await expense.save();
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(201).json({
             ...expense.toObject(),
@@ -26,8 +26,17 @@ export const createExpense = async (req, res) => {
 export const getExpenses = async (req, res) => {
     try {
         const { limit = 50, skip = 0 } = req.query;
-        const total = await Expense.countDocuments({ businessId: req.user.businessId });
-        const expenses = await Expense.find({ businessId: req.user.businessId })
+        const businessId = req.user.businessId;
+        const cacheKey = `expenses:list:${businessId}:${limit}:${skip}`;
+
+        // Try Cache
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
+
+        const total = await Expense.countDocuments({ businessId });
+        const expenses = await Expense.find({ businessId })
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
             .limit(parseInt(limit));
@@ -36,7 +45,13 @@ export const getExpenses = async (req, res) => {
             ...e.toObject(),
             id: e._id.toString()
         }));
-        res.status(200).json({ expenses: formattedExpenses, total });
+
+        const result = { expenses: formattedExpenses, total };
+
+        // Cache for 10 minutes
+        await setCache(cacheKey, result, 600);
+
+        res.status(200).json(result);
     } catch (error) {
         console.error("Error fetching expenses:", error);
         res.status(500).json({ error: "Failed to fetch expenses" });
@@ -60,7 +75,7 @@ export const updateExpense = async (req, res) => {
         }
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(200).json({
              ...expense.toObject(),
@@ -86,7 +101,7 @@ export const deleteExpense = async (req, res) => {
         }
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(200).json({ message: "Expense deleted successfully" });
     } catch (error) {

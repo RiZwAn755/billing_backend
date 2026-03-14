@@ -1,5 +1,5 @@
 import Bill from "../models/bill.schema.js";
-import { clearStatsCache } from "../config/redis.js";
+import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
 
 // Helper strictly for business isolation generating unique bill numbers per business
 export const getNextBillNumber = async (businessId) => {
@@ -18,7 +18,7 @@ export const createBill = async (req, res) => {
         await bill.save();
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(201).json({
             ...bill.toObject(),
@@ -33,8 +33,17 @@ export const createBill = async (req, res) => {
 export const getBills = async (req, res) => {
     try {
         const { limit = 50, skip = 0 } = req.query;
-        const total = await Bill.countDocuments({ businessId: req.user.businessId });
-        const bills = await Bill.find({ businessId: req.user.businessId })
+        const businessId = req.user.businessId;
+        const cacheKey = `bills:list:${businessId}:${limit}:${skip}`;
+
+        // Try Cache
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
+            return res.status(200).json(cachedData);
+        }
+
+        const total = await Bill.countDocuments({ businessId });
+        const bills = await Bill.find({ businessId })
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
             .limit(parseInt(limit))
@@ -44,7 +53,13 @@ export const getBills = async (req, res) => {
             ...b.toObject(),
             id: b._id.toString()
         }));
-        res.status(200).json({ bills: formattedBills, total });
+
+        const result = { bills: formattedBills, total };
+
+        // Cache for 10 minutes (shorter duration for listings)
+        await setCache(cacheKey, result, 600);
+
+        res.status(200).json(result);
     } catch (error) {
         console.error("Error fetching bills:", error);
         res.status(500).json({ error: "Failed to fetch bills" });
@@ -85,7 +100,7 @@ export const updateBill = async (req, res) => {
         }
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(200).json({
             ...bill.toObject(),
@@ -111,7 +126,7 @@ export const deleteBill = async (req, res) => {
         }
 
         // Invalidate Cache
-        await clearStatsCache(req.user.businessId);
+        await invalidateBusinessCache(req.user.businessId);
 
         res.status(200).json({ message: "Bill deleted successfully" });
     } catch (error) {

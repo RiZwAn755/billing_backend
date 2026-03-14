@@ -152,6 +152,7 @@ export const getProductAnalytics = async (req, res) => {
         // Try Cache
         const cachedData = await getCache(cacheKey);
         if (cachedData) {
+            console.log("🚀 response from redis");
             return res.status(200).json(cachedData);
         }
 
