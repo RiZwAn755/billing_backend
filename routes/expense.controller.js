@@ -1,4 +1,5 @@
 import Expense from "../models/expense.schema.js";
+import { clearStatsCache } from "../config/redis.js";
 
 export const createExpense = async (req, res) => {
     try {
@@ -8,6 +9,10 @@ export const createExpense = async (req, res) => {
 
         const expense = new Expense(expenseData);
         await expense.save();
+
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
+
         res.status(201).json({
             ...expense.toObject(),
             id: expense._id.toString()
@@ -54,6 +59,9 @@ export const updateExpense = async (req, res) => {
             return res.status(404).json({ error: "Expense not found or unauthorized" });
         }
 
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
+
         res.status(200).json({
              ...expense.toObject(),
              id: expense._id.toString()
@@ -76,6 +84,9 @@ export const deleteExpense = async (req, res) => {
         if (!expense) {
             return res.status(404).json({ error: "Expense not found or unauthorized" });
         }
+
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
 
         res.status(200).json({ message: "Expense deleted successfully" });
     } catch (error) {

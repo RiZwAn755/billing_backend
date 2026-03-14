@@ -1,4 +1,5 @@
 import Bill from "../models/bill.schema.js";
+import { clearStatsCache } from "../config/redis.js";
 
 // Helper strictly for business isolation generating unique bill numbers per business
 export const getNextBillNumber = async (businessId) => {
@@ -15,6 +16,10 @@ export const createBill = async (req, res) => {
 
         const bill = new Bill(billData);
         await bill.save();
+
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
+
         res.status(201).json({
             ...bill.toObject(),
             id: bill._id.toString()
@@ -79,6 +84,9 @@ export const updateBill = async (req, res) => {
             return res.status(404).json({ error: "Bill not found or unauthorized" });
         }
 
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
+
         res.status(200).json({
             ...bill.toObject(),
             id: bill._id.toString()
@@ -101,6 +109,9 @@ export const deleteBill = async (req, res) => {
         if (!bill) {
             return res.status(404).json({ error: "Bill not found or unauthorized" });
         }
+
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
 
         res.status(200).json({ message: "Bill deleted successfully" });
     } catch (error) {

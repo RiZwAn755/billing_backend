@@ -1,4 +1,5 @@
 import Product from "../models/product.schema.js";
+import { clearStatsCache } from "../config/redis.js";
 
 export const createProduct = async (req, res) => {
     try {
@@ -8,6 +9,10 @@ export const createProduct = async (req, res) => {
 
         const product = new Product(productData);
         await product.save();
+
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
+
         res.status(201).json(product);
     } catch (error) {
         console.error("Error creating product:", error);
@@ -47,6 +52,9 @@ export const updateProduct = async (req, res) => {
             return res.status(404).json({ error: "Product not found or unauthorized" });
         }
 
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
+
         res.status(200).json({
              ...product.toObject(),
              id: product._id.toString()
@@ -69,6 +77,9 @@ export const deleteProduct = async (req, res) => {
         if (!product) {
             return res.status(404).json({ error: "Product not found or unauthorized" });
         }
+
+        // Invalidate Cache
+        await clearStatsCache(req.user.businessId);
 
         res.status(200).json({ message: "Product deleted successfully" });
     } catch (error) {
