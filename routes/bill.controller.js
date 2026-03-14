@@ -28,6 +28,7 @@ export const createBill = async (req, res) => {
 export const getBills = async (req, res) => {
     try {
         const { limit = 50, skip = 0 } = req.query;
+        const total = await Bill.countDocuments({ businessId: req.user.businessId });
         const bills = await Bill.find({ businessId: req.user.businessId })
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
@@ -38,7 +39,7 @@ export const getBills = async (req, res) => {
             ...b.toObject(),
             id: b._id.toString()
         }));
-        res.status(200).json(formattedBills);
+        res.status(200).json({ bills: formattedBills, total });
     } catch (error) {
         console.error("Error fetching bills:", error);
         res.status(500).json({ error: "Failed to fetch bills" });

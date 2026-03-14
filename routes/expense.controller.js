@@ -20,13 +20,18 @@ export const createExpense = async (req, res) => {
 
 export const getExpenses = async (req, res) => {
     try {
-        // Only return expenses matching the user's businessId
-        const expenses = await Expense.find({ businessId: req.user.businessId }).sort({ createdAt: -1 });
+        const { limit = 50, skip = 0 } = req.query;
+        const total = await Expense.countDocuments({ businessId: req.user.businessId });
+        const expenses = await Expense.find({ businessId: req.user.businessId })
+            .sort({ createdAt: -1 })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit));
+        
         const formattedExpenses = expenses.map(e => ({
             ...e.toObject(),
             id: e._id.toString()
         }));
-        res.status(200).json(formattedExpenses);
+        res.status(200).json({ expenses: formattedExpenses, total });
     } catch (error) {
         console.error("Error fetching expenses:", error);
         res.status(500).json({ error: "Failed to fetch expenses" });
