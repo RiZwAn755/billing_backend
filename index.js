@@ -6,6 +6,7 @@ import authRouter from './auth/auth.router.js';
 import productRouter from './routes/product.router.js';
 import billRouter from './routes/bill.router.js';
 import expenseRouter from './routes/expense.router.js';
+import statsRouter from './routes/stats.router.js';
 import connectDB from './config/db.js';
 
 const app = express();
@@ -16,6 +17,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/products', productRouter);
 app.use('/api/bills', billRouter);
 app.use('/api/expenses', expenseRouter);
+app.use('/api/stats', statsRouter);
 
 app.get('/health', (req, res) => {
   res.send('Server is running');

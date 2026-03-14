@@ -37,6 +37,10 @@ const expenseSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+// Indexes for performance
+expenseSchema.index({ businessId: 1, date: -1 });
+expenseSchema.index({ productName: 1 });
+
 const Expense = mongoose.model("Expense", expenseSchema);
 
 export default Expense;

@@ -27,7 +27,13 @@ export const createBill = async (req, res) => {
 
 export const getBills = async (req, res) => {
     try {
-        const bills = await Bill.find({ businessId: req.user.businessId }).sort({ createdAt: -1 });
+        const { limit = 50, skip = 0 } = req.query;
+        const bills = await Bill.find({ businessId: req.user.businessId })
+            .sort({ createdAt: -1 })
+            .skip(parseInt(skip))
+            .limit(parseInt(limit))
+            .select('billNumber customerName grandTotal date createdAt');
+        
         const formattedBills = bills.map(b => ({
             ...b.toObject(),
             id: b._id.toString()

@@ -33,6 +33,9 @@ const productSchema = new mongoose.Schema({
 // Index for performance filtering by businessId
 productSchema.index({ businessId: 1 });
 
+// Index for performance
+productSchema.index({ businessId: 1, createdAt: -1 });
+
 const Product = mongoose.model("Product", productSchema);
 
 export default Product;
