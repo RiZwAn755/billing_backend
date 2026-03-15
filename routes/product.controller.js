@@ -1,4 +1,5 @@
 import Product from "../models/product.schema.js";
+import Expense from "../models/expense.schema.js";
 import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
 
 export const createProduct = async (req, res) => {
@@ -10,10 +11,39 @@ export const createProduct = async (req, res) => {
         const product = new Product(productData);
         await product.save();
 
+        const quantity = Number(product.quantity) || 0;
+        const buyingPrice = Number(product.buyingPrice) || 0;
+
+        if (quantity > 0 && buyingPrice > 0) {
+            const today = new Date().toISOString().split('T')[0];
+            const totalCost = quantity * buyingPrice;
+
+            const expense = new Expense({
+                productName: product.name,
+                units: quantity,
+                costPerUnit: buyingPrice,
+                totalCost,
+                supplier: '',
+                date: today,
+                notes: `Auto-added from product purchase: ${product.name}`,
+                businessId: req.user.businessId
+            });
+
+            try {
+                await expense.save();
+            } catch (expenseError) {
+                await Product.findByIdAndDelete(product._id);
+                return res.status(500).json({ error: "Failed to create purchase expense" });
+            }
+        }
+
         // Invalidate Cache
         await invalidateBusinessCache(req.user.businessId);
 
-        res.status(201).json(product);
+        res.status(201).json({
+            ...product.toObject(),
+            id: product._id.toString()
+        });
     } catch (error) {
         console.error("Error creating product:", error);
         res.status(500).json({ error: "Failed to create product" });

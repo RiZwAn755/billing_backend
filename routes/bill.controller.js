@@ -1,4 +1,5 @@
 import Bill from "../models/bill.schema.js";
+import Product from "../models/product.schema.js";
 import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
 
 // Helper strictly for business isolation generating unique bill numbers per business
@@ -9,10 +10,57 @@ export const getNextBillNumber = async (businessId) => {
 };
 
 export const createBill = async (req, res) => {
+    let reducedStockItems = [];
     try {
         const billData = req.body;
         billData.businessId = req.user.businessId;
         // billNumber is auto-assigned by the pre-save hook in bill.schema.js
+
+        const items = Array.isArray(billData.items) ? billData.items : [];
+        const stockItems = items
+            .filter(item => item?.id)
+            .map(item => ({
+                productId: item.id,
+                qty: Number(item.qty) || 0,
+                name: item.name || 'Unknown Product'
+            }))
+            .filter(item => item.qty > 0);
+
+        if (stockItems.length > 0) {
+            try {
+                for (const item of stockItems) {
+                    const updated = await Product.findOneAndUpdate(
+                        {
+                            _id: item.productId,
+                            businessId: req.user.businessId,
+                            quantity: { $gte: item.qty }
+                        },
+                        { $inc: { quantity: -item.qty } },
+                        { new: true }
+                    );
+
+                    if (!updated) {
+                        throw new Error(`Insufficient stock for ${item.name}`);
+                    }
+
+                    reducedStockItems.push(item);
+                }
+            } catch (stockError) {
+                if (reducedStockItems.length > 0) {
+                    await Promise.all(
+                        reducedStockItems.map(item =>
+                            Product.findOneAndUpdate(
+                                { _id: item.productId, businessId: req.user.businessId },
+                                { $inc: { quantity: item.qty } }
+                            )
+                        )
+                    );
+                    reducedStockItems = [];
+                }
+
+                return res.status(400).json({ error: stockError.message || 'Insufficient stock' });
+            }
+        }
 
         const bill = new Bill(billData);
         await bill.save();
@@ -25,6 +73,17 @@ export const createBill = async (req, res) => {
             id: bill._id.toString()
         });
     } catch (error) {
+        if (reducedStockItems.length > 0) {
+            await Promise.all(
+                reducedStockItems.map(item =>
+                    Product.findOneAndUpdate(
+                        { _id: item.productId, businessId: req.user.businessId },
+                        { $inc: { quantity: item.qty } }
+                    )
+                )
+            );
+        }
+
         console.error("Error creating bill:", error.message, error.code, error.keyValue);
         res.status(500).json({ error: "Failed to create bill", detail: error.message });
     }

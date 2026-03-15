@@ -9,6 +9,10 @@ const productSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
+    buyingPrice: {
+        type: Number,
+        default: 0
+    },
     unit: {
         type: String,
         default: 'pcs'
