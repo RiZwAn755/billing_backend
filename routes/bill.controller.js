@@ -143,6 +143,24 @@ export const getBillById = async (req, res) => {
     }
 };
 
+export const getPublicBillById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const bill = await Bill.findById(id);
+
+        if (!bill) {
+            return res.status(404).json({ error: "Bill not found" });
+        }
+        res.status(200).json({
+            ...bill.toObject(),
+            id: bill._id.toString()
+        });
+    } catch (error) {
+        console.error("Error fetching public bill:", error);
+        res.status(500).json({ error: "Failed to fetch bill" });
+    }
+};
+
 export const updateBill = async (req, res) => {
     try {
         const { id } = req.params;

@@ -1,8 +1,10 @@
 import express from 'express';
-import { createBill, getBills, getBillById, updateBill, deleteBill } from './bill.controller.js';
+import { createBill, getBills, getBillById, getPublicBillById, updateBill, deleteBill } from './bill.controller.js';
 import { verifyToken } from '../middlewares/jwt.middleware.js';
 
 const router = express.Router();
+
+router.get('/public/:id', getPublicBillById);
 
 // Apply authentication middleware to all bill routes
 router.use(verifyToken);
