@@ -5,6 +5,10 @@ const billSchema = new mongoose.Schema({
         type: String,
         default: 'Walk-in Customer'
     },
+    customerPhone: {
+        type: String,
+        required: false
+    },
     items: [
         {
             id: { type: String }, // Optional ref to product ID
@@ -49,6 +53,10 @@ const billSchema = new mongoose.Schema({
     },
     billNumber: {
         type: Number
+    },
+    editHistory: {
+        type: Array,
+        default: []
     }
 }, { timestamps: true });
 
