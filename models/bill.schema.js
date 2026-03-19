@@ -53,6 +53,10 @@ const billSchema = new mongoose.Schema({
     },
     billNumber: {
         type: Number
+    },
+    editHistory: {
+        type: Array,
+        default: []
     }
 }, { timestamps: true });
 

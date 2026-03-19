@@ -148,15 +148,31 @@ export const updateBill = async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
 
-        const bill = await Bill.findOneAndUpdate(
-            { _id: id, businessId: req.user.businessId },
-            updates,
-            { new: true }
-        );
-
-        if (!bill) {
+        const existingBill = await Bill.findOne({ _id: id, businessId: req.user.businessId });
+        if (!existingBill) {
             return res.status(404).json({ error: "Bill not found or unauthorized" });
         }
+
+        const historySnapshot = {
+            modifiedAt: new Date(),
+            customerName: existingBill.customerName,
+            customerPhone: existingBill.customerPhone,
+            items: existingBill.items,
+            subtotal: existingBill.subtotal,
+            discountType: existingBill.discountType,
+            discountValue: existingBill.discountValue,
+            discountAmount: existingBill.discountAmount,
+            grandTotal: existingBill.grandTotal,
+        };
+
+        const bill = await Bill.findOneAndUpdate(
+            { _id: id, businessId: req.user.businessId },
+            { 
+                $set: updates,
+                $push: { editHistory: historySnapshot }
+            },
+            { new: true }
+        );
 
         // Invalidate Cache
         await invalidateBusinessCache(req.user.businessId);
