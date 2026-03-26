@@ -137,6 +137,34 @@ export const getBillById = async (req, res) => {
     }
 };
 
+export const getPublicBillById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const bill = await Bill.findById(id);
+
+        if (!bill) {
+            return res.status(404).json({ error: "Bill not found" });
+        }
+
+        // Look up business name for the PDF header
+        let businessName = 'Invoice';
+        try {
+            const User = (await import('../models/user.schema.js')).default;
+            const user = await User.findOne({ businessId: bill.businessId });
+            if (user) businessName = user.businessName;
+        } catch (e) { /* ignore */ }
+
+        res.status(200).json({
+            ...bill.toObject(),
+            id: bill._id.toString(),
+            businessName
+        });
+    } catch (error) {
+        console.error("Error fetching public bill:", error);
+        res.status(500).json({ error: "Failed to fetch bill" });
+    }
+};
+
 export const updateBill = async (req, res) => {
     try {
         const { id } = req.params;
