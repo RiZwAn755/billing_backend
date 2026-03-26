@@ -1,20 +1,14 @@
 import Bill from "../models/bill.schema.js";
 import Expense from "../models/expense.schema.js";
 import Product from "../models/product.schema.js";
-import { getCache, setCache } from "../config/redis.js";
+import { setCache } from "../config/redis.js";
 
 console.log("[Stats Controller] Loaded");
 
 export const getOverallStats = async (req, res) => {
     try {
         const businessId = req.user.businessId;
-        const cacheKey = `stats:overall:${businessId}`;
-
-        // Try to get from cache
-        const cachedData = await getCache(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(cachedData);
-        }
+        const cacheKey = req.cacheKey;
 
         const [productCount, billCount, revenueStats, expenseStats] = await Promise.all([
             Product.countDocuments({ businessId }),
@@ -54,13 +48,7 @@ export const getProfitAnalytics = async (req, res) => {
     try {
         const { period = 'monthly' } = req.query;
         const businessId = req.user.businessId;
-        const cacheKey = `stats:profit:${businessId}:${period}`;
-
-        // Try Cache
-        const cachedData = await getCache(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(cachedData);
-        }
+        const cacheKey = req.cacheKey;
 
         // Fetch raw data to group in JS for maximum reliability
         const [bills, expenses] = await Promise.all([
@@ -147,14 +135,7 @@ export const getProductAnalytics = async (req, res) => {
 
         if (!productName) return res.status(400).json({ error: "productName is required" });
 
-        const cacheKey = `stats:product:${businessId}:${productName.replace(/\s+/g, '_').toLowerCase()}`;
-
-        // Try Cache
-        const cachedData = await getCache(cacheKey);
-        if (cachedData) {
-            console.log("🚀 response from redis");
-            return res.status(200).json(cachedData);
-        }
+        const cacheKey = req.cacheKey;
 
         const [bills, expenses] = await Promise.all([
             Bill.find({ businessId: req.user.businessId, "items.name": { $regex: new RegExp(`^${productName}$`, "i") } }).select('items createdAt date').lean(),

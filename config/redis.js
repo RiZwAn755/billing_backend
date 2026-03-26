@@ -33,7 +33,6 @@ export const setCache = async (key, value, duration = 86400) => {
 export const getCache = async (key) => {
     try {
         const data = await redisClient.get(key);
-        console.log("Data from cache");
         return data ? JSON.parse(data) : null;
     } catch (err) {
         console.error('Redis Get Error:', err);

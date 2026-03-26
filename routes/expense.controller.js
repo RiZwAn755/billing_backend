@@ -1,5 +1,5 @@
 import Expense from "../models/expense.schema.js";
-import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
+import { setCache, invalidateBusinessCache } from "../config/redis.js";
 
 export const createExpense = async (req, res) => {
     try {
@@ -27,13 +27,7 @@ export const getExpenses = async (req, res) => {
     try {
         const { limit = 50, skip = 0 } = req.query;
         const businessId = req.user.businessId;
-        const cacheKey = `expenses:list:${businessId}:${limit}:${skip}`;
-
-        // Try Cache
-        const cachedData = await getCache(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(cachedData);
-        }
+        const cacheKey = req.cacheKey;
 
         const total = await Expense.countDocuments({ businessId });
         const expenses = await Expense.find({ businessId })

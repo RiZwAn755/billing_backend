@@ -1,6 +1,6 @@
 import Product from "../models/product.schema.js";
 import Expense from "../models/expense.schema.js";
-import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
+import { setCache, invalidateBusinessCache } from "../config/redis.js";
 
 export const createProduct = async (req, res) => {
     try {
@@ -53,13 +53,7 @@ export const createProduct = async (req, res) => {
 export const getProducts = async (req, res) => {
     try {
         const businessId = req.user.businessId;
-        const cacheKey = `products:list:${businessId}`;
-
-        // Try Cache
-        const cachedData = await getCache(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(cachedData);
-        }
+        const cacheKey = req.cacheKey;
 
         // Only return products matching the user's businessId
         const products = await Product.find({ businessId }).sort({ createdAt: -1 });

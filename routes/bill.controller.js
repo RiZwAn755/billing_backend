@@ -1,6 +1,6 @@
 import Bill from "../models/bill.schema.js";
 import Product from "../models/product.schema.js";
-import { getCache, setCache, invalidateBusinessCache } from "../config/redis.js";
+import { setCache, invalidateBusinessCache } from "../config/redis.js";
 
 // Helper strictly for business isolation generating unique bill numbers per business
 export const getNextBillNumber = async (businessId) => {
@@ -93,13 +93,7 @@ export const getBills = async (req, res) => {
     try {
         const { limit = 50, skip = 0 } = req.query;
         const businessId = req.user.businessId;
-        const cacheKey = `bills:list:${businessId}:${limit}:${skip}`;
-
-        // Try Cache
-        const cachedData = await getCache(cacheKey);
-        if (cachedData) {
-            return res.status(200).json(cachedData);
-        }
+        const cacheKey = req.cacheKey;
 
         const total = await Bill.countDocuments({ businessId });
         const bills = await Bill.find({ businessId })
