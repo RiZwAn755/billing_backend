@@ -33,10 +33,11 @@ export const getExpenses = async (req, res) => {
         const expenses = await Expense.find({ businessId })
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
-            .limit(parseInt(limit));
+            .limit(parseInt(limit))
+            .lean();
         
         const formattedExpenses = expenses.map(e => ({
-            ...e.toObject(),
+            ...e,
             id: e._id.toString()
         }));
 

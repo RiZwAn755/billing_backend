@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import authRouter from './auth/auth.router.js';
 import productRouter from './routes/product.router.js';
 import billRouter from './routes/bill.router.js';
@@ -10,6 +11,7 @@ import statsRouter from './routes/stats.router.js';
 import connectDB from './config/db.js';
 
 const app = express();
+app.use(compression());
 app.use(cors({ origin: ['http://localhost:5173', 'https://billing-backend-gamma.vercel.app', 'https://needy-bills.vercel.app'], credentials: true }));
 app.use(express.json());
 app.use(cookieParser());

@@ -56,10 +56,10 @@ export const getProducts = async (req, res) => {
         const cacheKey = req.cacheKey;
 
         // Only return products matching the user's businessId
-        const products = await Product.find({ businessId }).sort({ createdAt: -1 });
+        const products = await Product.find({ businessId }).sort({ createdAt: -1 }).lean();
         // Add robust mapping to map MongoDB _id to frontend id requirement dynamically
         const formattedProducts = products.map(p => ({
-            ...p.toObject(),
+            ...p,
             id: p._id.toString()
         }));
 

@@ -100,10 +100,11 @@ export const getBills = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
             .limit(parseInt(limit))
-            .select('billNumber customerName grandTotal date createdAt');
+            .select('billNumber customerName grandTotal date createdAt')
+            .lean();
         
         const formattedBills = bills.map(b => ({
-            ...b.toObject(),
+            ...b,
             id: b._id.toString()
         }));
 
@@ -122,13 +123,13 @@ export const getBills = async (req, res) => {
 export const getBillById = async (req, res) => {
     try {
         const { id } = req.params;
-        const bill = await Bill.findOne({ _id: id, businessId: req.user.businessId });
+        const bill = await Bill.findOne({ _id: id, businessId: req.user.businessId }).lean();
 
         if (!bill) {
             return res.status(404).json({ error: "Bill not found or unauthorized" });
         }
         res.status(200).json({
-            ...bill.toObject(),
+            ...bill,
             id: bill._id.toString()
         });
     } catch (error) {
@@ -140,7 +141,7 @@ export const getBillById = async (req, res) => {
 export const getPublicBillById = async (req, res) => {
     try {
         const { id } = req.params;
-        const bill = await Bill.findById(id);
+        const bill = await Bill.findById(id).lean();
 
         if (!bill) {
             return res.status(404).json({ error: "Bill not found" });
@@ -150,12 +151,12 @@ export const getPublicBillById = async (req, res) => {
         let businessName = 'Invoice';
         try {
             const User = (await import('../models/user.schema.js')).default;
-            const user = await User.findOne({ businessId: bill.businessId });
+            const user = await User.findOne({ businessId: bill.businessId }).lean();
             if (user) businessName = user.businessName;
         } catch (e) { /* ignore */ }
 
         res.status(200).json({
-            ...bill.toObject(),
+            ...bill,
             id: bill._id.toString(),
             businessName
         });
