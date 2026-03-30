@@ -176,6 +176,77 @@ export const updateBill = async (req, res) => {
             return res.status(404).json({ error: "Bill not found or unauthorized" });
         }
 
+        // If items are being updated, we need to adjust product stock
+        if (updates.items) {
+            const oldItemsMap = {};
+            existingBill.items.forEach(item => {
+                if (item.id) {
+                    oldItemsMap[item.id] = (oldItemsMap[item.id] || 0) + Number(item.qty);
+                }
+            });
+
+            const newItemsMap = {};
+            const newItems = Array.isArray(updates.items) ? updates.items : [];
+            newItems.forEach(item => {
+                if (item.id) {
+                    newItemsMap[item.id] = (newItemsMap[item.id] || 0) + Number(item.qty);
+                }
+            });
+
+            const stockAdjustments = [];
+            const allProductIds = new Set([...Object.keys(oldItemsMap), ...Object.keys(newItemsMap)]);
+            
+            for (const productId of allProductIds) {
+                const oldQty = oldItemsMap[productId] || 0;
+                const newQty = newItemsMap[productId] || 0;
+                const diff = newQty - oldQty; // Positive diff means stock goes down
+                
+                if (diff !== 0) {
+                    stockAdjustments.push({ productId, diff });
+                }
+            }
+
+            const appliedAdjustments = [];
+            try {
+                for (const adj of stockAdjustments) {
+                    if (adj.diff > 0) {
+                        // Need to decrease stock
+                        const updated = await Product.findOneAndUpdate(
+                            {
+                                _id: adj.productId,
+                                businessId: req.user.businessId,
+                                quantity: { $gte: adj.diff }
+                            },
+                            { $inc: { quantity: -adj.diff } },
+                            { new: true }
+                        );
+                        if (!updated) {
+                            throw new Error(`Insufficient stock for a product`);
+                        }
+                        appliedAdjustments.push(adj);
+                    } else if (adj.diff < 0) {
+                        // Need to increase stock
+                        await Product.findOneAndUpdate(
+                            { _id: adj.productId, businessId: req.user.businessId },
+                            { $inc: { quantity: Math.abs(adj.diff) } }
+                        );
+                        appliedAdjustments.push(adj);
+                    }
+                }
+            } catch (stockError) {
+                // Rollback if any adjustment failed due to insufficient stock
+                await Promise.all(
+                    appliedAdjustments.map(adj =>
+                        Product.findOneAndUpdate(
+                            { _id: adj.productId, businessId: req.user.businessId },
+                            { $inc: { quantity: adj.diff > 0 ? adj.diff : -Math.abs(adj.diff) } }
+                        )
+                    )
+                );
+                return res.status(400).json({ error: stockError.message || 'Insufficient stock' });
+            }
+        }
+
         const historySnapshot = {
             modifiedAt: new Date(),
             customerName: existingBill.customerName,
@@ -221,6 +292,19 @@ export const deleteBill = async (req, res) => {
 
         if (!bill) {
             return res.status(404).json({ error: "Bill not found or unauthorized" });
+        }
+
+        // Restore product stock from the deleted bill
+        if (bill.items && Array.isArray(bill.items)) {
+            const itemsToRestore = bill.items.filter(item => item.id && Number(item.qty) > 0);
+            await Promise.all(
+                itemsToRestore.map(item =>
+                    Product.findOneAndUpdate(
+                        { _id: item.id, businessId: req.user.businessId },
+                        { $inc: { quantity: Number(item.qty) } }
+                    )
+                )
+            );
         }
 
         // Invalidate Cache

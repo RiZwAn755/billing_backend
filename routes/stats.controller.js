@@ -138,7 +138,7 @@ export const getProductAnalytics = async (req, res) => {
         const cacheKey = req.cacheKey;
 
         const [bills, expenses] = await Promise.all([
-            Bill.find({ businessId: req.user.businessId, "items.name": { $regex: new RegExp(`^${productName}$`, "i") } }).select('items createdAt date').lean(),
+            Bill.find({ businessId: req.user.businessId, "items.name": { $regex: new RegExp(`^${productName}$`, "i") } }).select('items createdAt date subtotal discountAmount grandTotal').lean(),
             Expense.find({ businessId: req.user.businessId, productName: { $regex: new RegExp(`^${productName}$`, "i") } }).select('totalCost date createdAt').lean()
         ]);
 
@@ -160,11 +160,17 @@ export const getProductAnalytics = async (req, res) => {
             const billKey = getMonthKey(bill.date, bill.createdAt);
             if (!mergeMap[billKey]) mergeMap[billKey] = { label: billKey, revenue: 0, expenses: 0, profit: 0 };
             
+            // Calculate proportional discount for this bill
+            const discountRatio = (bill.discountAmount && bill.subtotal) ? (bill.discountAmount / bill.subtotal) : 0;
+            
             bill.items.forEach(item => {
                 if (item.name.toLowerCase() === productName.toLowerCase()) {
-                    mergeMap[billKey].revenue += (item.amount || 0);
-                    mergeMap[billKey].profit += (item.amount || 0);
-                    totalRevenue += (item.amount || 0);
+                    const itemRevenue = item.amount || 0;
+                    const finalItemRevenue = itemRevenue - (itemRevenue * discountRatio);
+                    
+                    mergeMap[billKey].revenue += finalItemRevenue;
+                    mergeMap[billKey].profit += finalItemRevenue;
+                    totalRevenue += finalItemRevenue;
                 }
             });
         });
