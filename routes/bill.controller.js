@@ -91,16 +91,22 @@ export const createBill = async (req, res) => {
 
 export const getBills = async (req, res) => {
     try {
-        const { limit = 50, skip = 0 } = req.query;
+        const { limit = 50, skip = 0, startDate, endDate } = req.query;
         const businessId = req.user.businessId;
         const cacheKey = req.cacheKey;
 
-        const total = await Bill.countDocuments({ businessId });
-        const bills = await Bill.find({ businessId })
+        let query = { businessId };
+        
+        if (startDate && endDate) {
+            query.date = { $gte: startDate, $lte: endDate };
+        }
+
+        const total = await Bill.countDocuments(query);
+        const bills = await Bill.find(query)
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
             .limit(parseInt(limit))
-            .select('billNumber customerName grandTotal date createdAt')
+            .select('billNumber customerName customerPhone grandTotal date createdAt')
             .lean();
         
         const formattedBills = bills.map(b => ({

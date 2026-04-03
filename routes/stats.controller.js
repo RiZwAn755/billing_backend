@@ -19,6 +19,8 @@ export const getOverallStats = async (req, res) => {
         ]);
 
         const dateFilter = req.query.date;
+        const startDateFilter = req.query.startDate;
+        const endDateFilter = req.query.endDate;
 
         const getLocalYYYYMMDD = () => {
             const now = new Date();
@@ -35,6 +37,11 @@ export const getOverallStats = async (req, res) => {
                 if (isNaN(d.getTime())) return false;
                 const localD = new Date(d.getTime() - (d.getTimezoneOffset() * 60000));
                 const computed = localD.toISOString().split('T')[0];
+
+                if (startDateFilter && endDateFilter) {
+                    return computed >= startDateFilter && computed <= endDateFilter;
+                }
+
                 return computed === targetStr;
             } catch { return false; }
         };
@@ -117,12 +124,11 @@ export const getOverallStats = async (req, res) => {
 
         let totalProfit;
 
-        if (dateFilter) {
-            // Date-filtered view: show that specific day's numbers on the cards
+        if (dateFilter || (startDateFilter && endDateFilter)) {
+            // Date-filtered view: show that specific period's numbers on the cards
             totalRevenue = todayRevenue;
             totalExpenses = todayExpenses;
-            // Day's profit = Day's Revenue - Day's COGS (qty sold that day × CP)
-            // (unsold stock from that day's purchases stays as asset, not a loss)
+            // Period's profit = Period's Revenue - Period's COGS
             totalProfit = todayRevenue - todayCOGS;
         } else {
             // All-time view: Net Profit = Revenue + Remaining Stock Value - Total Cost

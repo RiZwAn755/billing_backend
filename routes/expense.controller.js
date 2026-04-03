@@ -25,12 +25,18 @@ export const createExpense = async (req, res) => {
 
 export const getExpenses = async (req, res) => {
     try {
-        const { limit = 50, skip = 0 } = req.query;
+        const { limit = 50, skip = 0, startDate, endDate } = req.query;
         const businessId = req.user.businessId;
         const cacheKey = req.cacheKey;
 
-        const total = await Expense.countDocuments({ businessId });
-        const expenses = await Expense.find({ businessId })
+        let query = { businessId };
+
+        if (startDate && endDate) {
+            query.date = { $gte: startDate, $lte: endDate };
+        }
+
+        const total = await Expense.countDocuments(query);
+        const expenses = await Expense.find(query)
             .sort({ createdAt: -1 })
             .skip(parseInt(skip))
             .limit(parseInt(limit))
