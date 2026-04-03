@@ -1,0 +1,41 @@
+[
+  {
+    "_id": "69b26e162ed21484e34b1473",
+    "name": "rice",
+    "price": 125,
+    "unit": "kg",
+    "category": "",
+    "quantity": 0,
+    "expiryDate": "2026-03-27T00:00:00.000Z",
+    "businessId": "79623594-eb18-4176-b3c9-e4996cbbfeaf",
+    "createdAt": "2026-03-12T07:41:10.381Z",
+    "updatedAt": "2026-03-12T07:41:39.533Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b26e2a2ed21484e34b1476",
+    "name": "wheat",
+    "price": 23,
+    "unit": "g",
+    "category": "",
+    "quantity": 0,
+    "expiryDate": "2026-03-27T00:00:00.000Z",
+    "businessId": "79623594-eb18-4176-b3c9-e4996cbbfeaf",
+    "createdAt": "2026-03-12T07:41:30.064Z",
+    "updatedAt": "2026-03-12T07:41:30.064Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b2fc19e0a42e85206d80a8",
+    "name": "test",
+    "price": 0.16,
+    "unit": "pcs",
+    "category": "yyy",
+    "quantity": 8989,
+    "expiryDate": "2026-04-10T00:00:00.000Z",
+    "businessId": "3f236937-b176-4c33-9ea6-81b5783072c5",
+    "createdAt": "2026-03-12T17:47:05.519Z",
+    "updatedAt": "2026-03-12T17:47:05.519Z",
+    "__v": 0
+  }
+]

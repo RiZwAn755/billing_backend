@@ -9,6 +9,7 @@ import billRouter from './routes/bill.router.js';
 import expenseRouter from './routes/expense.router.js';
 import statsRouter from './routes/stats.router.js';
 import connectDB from './config/db.js';
+import { flushAllCache } from './config/redis.js';
 
 const app = express();
 app.use(compression());
@@ -27,6 +28,9 @@ app.get('/health', (req, res) => {
 
 // Await the database connection before accepting API requests
 connectDB().then(async () => {
+  // Flush stale Redis cache on every restart so formula changes take effect
+  await flushAllCache();
+
   // Drop the stale unique index on billNumber if it exists
   try {
     const Bill = (await import('./models/bill.schema.js')).default;

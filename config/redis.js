@@ -55,7 +55,8 @@ export const invalidateBusinessCache = async (businessId) => {
             `stats:*:${businessId}*`,
             `bills:*:${businessId}*`,
             `expenses:*:${businessId}*`,
-            `products:*:${businessId}*`
+            `products:*:${businessId}*`,
+            `analytics:*:${businessId}*`
         ];
         
         for (const pattern of patterns) {
@@ -67,6 +68,15 @@ export const invalidateBusinessCache = async (businessId) => {
         console.log(`🧹 Invalidated all cache keys for business: ${businessId}`);
     } catch (err) {
         console.error('Redis Invalidation  Error:', err);
+    }
+};
+
+export const flushAllCache = async () => {
+    try {
+        await redisClient.flushall();
+        console.log('🧹 Flushed all Redis cache keys');
+    } catch (err) {
+        console.error('Redis FlushAll Error:', err);
     }
 };
 

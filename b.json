@@ -1,0 +1,78 @@
+[
+  {
+    "_id": "69b275486a87215ad94240c3",
+    "customerName": "avantikasmans",
+    "items": [
+      {
+        "id": "69b26e162ed21484e34b1473",
+        "name": "rice",
+        "price": 125,
+        "qty": 5,
+        "unit": "kg",
+        "amount": 625,
+        "_id": "69b2763e6a87215ad9424166"
+      }
+    ],
+    "subtotal": 625,
+    "discountType": "percent",
+    "discountValue": 7,
+    "discountAmount": 43.75,
+    "grandTotal": 581.25,
+    "businessId": "79623594-eb18-4176-b3c9-e4996cbbfeaf",
+    "createdAt": "2026-03-12T08:11:52.069Z",
+    "updatedAt": "2026-03-12T08:15:58.279Z",
+    "__v": 0
+  },
+  {
+    "_id": "69b2f0c99810aa277bb79fb5",
+    "customerName": "rizwan",
+    "items": [
+      {
+        "id": "69b26f1c2ed21484e34b14b3",
+        "name": "venilla",
+        "price": 234,
+        "qty": 2,
+        "unit": "l",
+        "amount": 468,
+        "_id": "69b2f0c99810aa277bb79fb6"
+      }
+    ],
+    "subtotal": 468,
+    "discountType": "percent",
+    "discountValue": 10,
+    "discountAmount": 46.8,
+    "grandTotal": 421.2,
+    "businessId": "e6be282e-b013-4620-be40-19d5488d8c1c",
+    "date": "2026-03-12T16:58:49.111Z",
+    "createdAt": "2026-03-12T16:58:49.116Z",
+    "updatedAt": "2026-03-12T16:58:49.116Z",
+    "billNumber": 1,
+    "__v": 0
+  },
+  {
+    "_id": "69b2f0dd9810aa277bb79fcb",
+    "customerName": "avanish",
+    "items": [
+      {
+        "id": "69b26f332ed21484e34b14b6",
+        "name": "perfume",
+        "price": 400,
+        "qty": 3,
+        "unit": "ml",
+        "amount": 1200,
+        "_id": "69b2f0dd9810aa277bb79fcc"
+      }
+    ],
+    "subtotal": 1200,
+    "discountType": "percent",
+    "discountValue": 60,
+    "discountAmount": 720,
+    "grandTotal": 480,
+    "businessId": "e6be282e-b013-4620-be40-19d5488d8c1c",
+    "date": "2026-03-12T16:59:09.027Z",
+    "createdAt": "2026-03-12T16:59:09.028Z",
+    "updatedAt": "2026-03-12T16:59:09.028Z",
+    "billNumber": 2,
+    "__v": 0
+  }
+]
